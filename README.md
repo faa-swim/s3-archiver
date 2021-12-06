@@ -62,18 +62,16 @@ Query Archive for Specific Data in Archive Files
  	List<String> values = new ArrayList<String>();
 	values.add("Property_Value");
 	filters.put("Property_Key", values);
-	s3Archiver.getMessagesFromArchive(s3Archiver.getCategoryPrefix(), Instant.now().minusSeconds(10 * 60 * 60),
-    Instant.now(), filters, true, this);
+	s3Archiver.getMessagesFromArchive(s3Archiver.getCategoryPrefix(), Instant.now().minusSeconds(10 * 60 * 60), Instant.now(), filters, true, this);
 ```
 
 Recieve and Process Messages
 
 ```java
 	@Override
-    public void recieveMessage(ArchivedMessageObject archivedMessage) {
-        System.out.println("Properties:");
-		System.out.println(archivedMessage.getProperties().toString());
-		System.out.println("Message:");
-
-    }
+        public void recieveMessage(ArchivedMessageObject archivedMessage) {
+	    System.out.println("Properties:");
+	    System.out.println(archivedMessage.getProperties().toString());
+	    System.out.println("Message:");
+        }
 ```
