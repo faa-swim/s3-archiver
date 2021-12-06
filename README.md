@@ -71,5 +71,6 @@ Recieve and Process Messages
 	    System.out.println("Properties:");
 	    System.out.println(archivedMessage.getProperties().toString());
 	    System.out.println("Message:");
+	    System.out.println(archivedMessage.getMessage());
         }
 ```
