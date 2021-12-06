@@ -29,8 +29,7 @@ Import Required Dependancies
 Create new S3Archiver
 
 ```java
-	 S3Archiver s3Archiver = new S3Archiver("BUCKET", "S3_SERVICE_URL", "S3_REGION",
-                "S3_KEY", "S3_SECRET", "ARCHIVE_PREFIX", false);
+	 S3Archiver s3Archiver = new S3Archiver("BUCKET", "S3_SERVICE_URL", "S3_REGION", "S3_KEY", "S3_SECRET", "ARCHIVE_PREFIX", false);
 ```
 
 Set Upload Schedule (chron [Sec Min Hour Day])
