@@ -1,4 +1,4 @@
-# FAA SWIM S3 Archiver
+# S3 Archiver
 
 Provides a tool to archive data in S3, and query data that is archived through S3 Select. Data is archived in json newline delimited files with two json object; properties and message. Properties provide metadata about the message that can be used with S3 Select to receive a specified subset of message from the archive. The message itself is stored HEX encoded and is decoded back to its original form when using getMessagesFromArchive() function. 
 
