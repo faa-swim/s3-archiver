@@ -41,8 +41,7 @@ Set Upload Schedule (chron [Sec Min Hour Day])
 Start S3 Archiver
 
 ```java
-	 s3Archiver.start();
-	
+	 s3Archiver.start();	
 ```
 
 Add Data for Archiving
