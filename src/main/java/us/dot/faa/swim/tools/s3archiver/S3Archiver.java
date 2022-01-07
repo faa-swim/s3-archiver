@@ -433,76 +433,66 @@ public class S3Archiver implements Runnable, AutoCloseable {
         }
     }
 
-    public void getMessagesFromArchive(String archiveCategoryPrefix, Instant from, Instant to,
-    Map<String, List<String>> properties, boolean useOrSelect, MessageReciever reciever) {
+    private SelectResponseStream getMessages(Item fileItem,
+            Map<String, List<String>> filters, boolean useOrSelect)
+            throws InvalidKeyException, ErrorResponseException, InsufficientDataException, InternalException,
+            InvalidResponseException, NoSuchAlgorithmException, ServerException, XmlParserException,
+            IllegalArgumentException, IOException {
+        // build expression
+        StringBuilder queryBuilder = new StringBuilder();
+        queryBuilder.append("select * from S3Object as o");
 
-        Instant refTime = from;
+        if (filters != null && filters.size() > 0) {
+            queryBuilder.append(" where");
+            int i = 1;
+            for (Map.Entry<String, List<String>> prop : filters.entrySet()) {
+                queryBuilder.append(" (");
+                int ii = 1;
+                for (String value : prop.getValue()) {
+                    queryBuilder.append(" o.properties." + prop.getKey() + "='" + value + "'");                                        
+                    if (ii< prop.getValue().size()) {
+                        queryBuilder.append(" OR");
+                    }                                        
+                    ii++;
+                }
+                queryBuilder.append(")");                                                              
+                if (i < filters.size()) {
+                    if (useOrSelect) {
+                        queryBuilder.append(" OR");
+                    } else {
+                        queryBuilder.append(" AND");
+                    }
+                }
+                i++; 
+            }
+        }
 
-        while (refTime.isBefore(to.plus(1, ChronoUnit.DAYS))) {
 
-            String fromPrefix;
-            if (prefixDateTimeFirst) {
-                fromPrefix = minioArchiveDatePrefixFormat.format(Date.from(refTime)) + archiveCategoryPrefix;
-            } else {
-                fromPrefix = archiveCategoryPrefix + minioArchiveDatePrefixFormat.format(Date.from(refTime));
+        SelectResponseStream stream = null;
+        try {
+
+            CompressionType compressionType = CompressionType.NONE;
+            if (fileItem.userMetadata().get("content-type").equals("application/x-gzip")) {
+                compressionType = CompressionType.GZIP;
             }
 
-            Iterable<Result<Item>> results = minioClient.listObjects(
-                    ListObjectsArgs.builder().bucket(bucket).prefix(fromPrefix).includeUserMetadata(true)
-                            .recursive(true).build());
+            InputSerialization is = new InputSerialization(compressionType, JsonType.LINES);
+            OutputSerialization os = new OutputSerialization(null);
 
-            refTime = refTime.plus(1, ChronoUnit.DAYS);
-            List<Item> itemList = new ArrayList<>();
+            String query = queryBuilder.toString();
 
-            results.forEach(item -> {
-                try {
-                    Item file = item.get();
-                    final String beginTimeString = file.userMetadata().get("X-Amz-Meta-Begintime");
-                    final String endTimeString = file.userMetadata().get("X-Amz-Meta-Endtime");
+            stream = minioClient
+                    .selectObjectContent(
+                            SelectObjectContentArgs.builder().bucket(bucket)
+                                    .object(fileItem.objectName()).sqlExpression(query)
+                                    .inputSerialization(is).outputSerialization(os).requestProgress(true).build());
 
-                    final Date beginTimeDate = archiveFileDateFormat.parse(beginTimeString);
-                    final Date endTimeDate = archiveFileDateFormat.parse(endTimeString);
-
-                    final Instant beginTime = beginTimeDate.toInstant();
-                    final Instant endTime = endTimeDate.toInstant();
-
-                    if (beginTime.isAfter(from) && endTime.isBefore(to)) {
-
-                        itemList.add(file);
-                    }
-
-                } catch (InvalidKeyException | ErrorResponseException | InsufficientDataException | InternalException
-                        | InvalidResponseException | NoSuchAlgorithmException | ServerException | XmlParserException
-                        | IllegalArgumentException | IOException | ParseException e) {
-
-                    logger.error(e.getMessage(), e);
-                }
-            });
-
-            itemList.parallelStream().forEach(fileItem -> {
-                try (SelectResponseStream responseStream = getMessages(fileItem, properties,
-                        useOrSelect)) {
-
-                    try (BufferedReader reader = new BufferedReader(
-                            new InputStreamReader(new BufferedInputStream(responseStream)))) {
-
-                        String message = "";
-                        while ((message = reader.readLine()) != null) {
-                            ArchivedMessageObject archivedMessageObject = new ArchivedMessageObject(message);
-
-                            Instant messageime = Instant
-                                    .ofEpochMilli(Long
-                                            .parseLong(archivedMessageObject.getPropertyValue("archivedTimestamp")));
-
-                            if (messageime.isAfter(from) && messageime.isBefore(to)) {
-                                reciever.recieveMessage(archivedMessageObject);
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    logger.error(e.getMessage(), e);
-                }
-            });
+            return stream;
+        } catch (Exception e) {
+            if (stream != null) {
+                stream.close();
+            }
+            throw e;
         }
 
     }
