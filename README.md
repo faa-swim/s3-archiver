@@ -56,10 +56,9 @@ Add Data for Archiving
 Query Archive for Specific Data in Archive Files
 
 ```java
-	Hashtable<String,List<String>> filters = new Hashtable<>();	
- 	List<String> values = new ArrayList<String>();
-	values.add("Property_Value");
-	filters.put("Property_Key", values);
+	Hashtable<String,List<String>> filters = new Hashtable<>();	 	
+	filters.put("Property_Key_1", Arrays.asList("Property_1_Value_A","Property_Value_1_B")); // multiple properties indicate OR
+	filters.put("Property_Key_2", Arrays.asList("Property_2_Value_A")); // use of AND vs OR controled by useOrSelect boolean
 	s3Archiver.getMessagesFromArchive(s3Archiver.getCategoryPrefix(), Instant.now().minusSeconds(10 * 60 * 60), Instant.now(), filters, true, this);
 ```
 
